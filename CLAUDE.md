@@ -50,7 +50,7 @@ Go 1.22 (`go.mod`). The user compiles and tests on Windows themselves, so hand c
 - **Win32 strings:** convert with `uintptr(unsafe.Pointer(utf16(s)))` inside the `.Call(...)` argument list itself, so the buffer stays alive for the call. Don't store the converted `uintptr` in a variable first.
 - **Callbacks:** `syscall.NewCallback` slots are never freed (limit 2000). Create callbacks once at package level.
 - **Anti-cheat:** the user plays games with kernel anti-cheat (Riot Vanguard). Don't add keyboard or mouse hooks (`WH_KEYBOARD_LL`, `WH_MOUSE_LL`), in-context WinEvent hooks, DLL injection, or anything that reads or writes other processes' memory.
-- **Detection:** match windows by process name or class, never by title (titles are localized).
+- **Detection:** match windows by process name or class, never by title (titles are localized). A maximized window whose frame hangs past the monitor edges is not fullscreen (with taskbar auto-hide on, maximized windows cover the monitor); real fullscreen windows fit the monitor exactly.
 - **Expensive events:** don't hook `EVENT_OBJECT_LOCATIONCHANGE` or other high-volume events system-wide. They fire on every mouse move.
 - **No thide:** the tool used to call thide. It no longer does; don't reintroduce it or any other external tool.
 - **Data files:** `config.json`, `ath.log` and `hidden.marker` always live next to the exe. Don't add a fallback directory such as `%LOCALAPPDATA%`; the user removed one on purpose.

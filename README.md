@@ -6,6 +6,7 @@ A small background process for Windows that automatically hides the taskbar when
 
 - Windows tells it the moment the foreground window changes. It also checks every 300 ms as a fallback, for example for a window that resizes into fullscreen.
 - If the window covers its whole monitor, it hides the taskbar (on every monitor, or only that monitor with `per_monitor`).
+- Maximized windows don't count, even with Windows' "Automatically hide the taskbar" setting on (where a maximized window also covers the whole monitor). The log marks them `[maximized]`.
 - When you switch away, it shows the taskbar again. If you open Start, Search, the notification center, quick settings, the taskbar comes back straight away without the leave delay.
 - Every foreground change is written to the log with the window's process, class and size.
 - It only restores the taskbar if it was the one that hid it, and leaves a taskbar alone if something else already hid it.

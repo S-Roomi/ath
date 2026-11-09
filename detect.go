@@ -169,6 +169,16 @@ func detectForeground(cfg *Config) foreground {
 	if !(r.Left <= m.Left && r.Top <= m.Top && r.Right >= m.Right && r.Bottom >= m.Bottom) {
 		return f
 	}
+	// With "Automatically hide the taskbar" on, the work area is the whole
+	// monitor, so a maximized window covers it too. Such a window is maximized
+	// and its frame hangs past the monitor edges (e.g. -8,-8 5136x1456 on
+	// 5120x1440). Real fullscreen and borderless windows fit the monitor
+	// exactly, even when they keep the maximized flag, so they still count.
+	if zoomed, _, _ := pIsZoomed.Call(h); zoomed != 0 &&
+		(r.Left < m.Left || r.Top < m.Top || r.Right > m.Right || r.Bottom > m.Bottom) {
+		f.note = "maximized"
+		return f
+	}
 	if contains(cfg.Ignore, f.proc) {
 		f.note = "ignored"
 		return f

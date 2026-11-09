@@ -18,6 +18,7 @@ var (
 	pGetWindowThreadProcessID   = user32.NewProc("GetWindowThreadProcessId")
 	pIsWindowVisible            = user32.NewProc("IsWindowVisible")
 	pIsIconic                   = user32.NewProc("IsIconic")
+	pIsZoomed                   = user32.NewProc("IsZoomed")
 	pFindWindowExW              = user32.NewProc("FindWindowExW")
 	pShowWindow                 = user32.NewProc("ShowWindow")
 	pGetShellWindow             = user32.NewProc("GetShellWindow")
