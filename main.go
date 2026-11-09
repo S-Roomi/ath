@@ -60,7 +60,7 @@ func run(cfgPath string) {
 
 	stopEv, _, _ := pCreateEventW.Call(0, 1, 0, uintptr(unsafe.Pointer(utf16(stopEventName))))
 
-	// Ctrl+C / SIGTERM (when run from a console) trigger the same clean exit as --stop.
+	// Ctrl+C / SIGTERM (when run from a console) trigger the same clean exit as --quit.
 	sig := make(chan os.Signal, 1)
 	signal.Notify(sig, os.Interrupt, syscall.SIGTERM)
 	go func() { <-sig; pSetEvent.Call(stopEv) }()
@@ -219,12 +219,12 @@ func singleInstance() bool {
 func sendStop() {
 	h, _, _ := pOpenEventW.Call(eventModifyState, 0, uintptr(unsafe.Pointer(utf16(stopEventName))))
 	if h == 0 {
-		log.Println("stop: no running instance found")
+		log.Println("quit: no running instance found")
 		return
 	}
 	pSetEvent.Call(h)
 	pCloseHandle.Call(h)
-	log.Println("stop: stop signal sent")
+	log.Println("quit: stop signal sent")
 }
 
 func setAutostart(enable bool) {
@@ -268,7 +268,7 @@ func main() {
 
 	if len(os.Args) > 1 {
 		switch os.Args[1] {
-		case "--stop":
+		case "--quit", "--stop": // --stop is the old name, kept so existing shortcuts still work
 			sendStop()
 		case "--restore":
 			// A running watcher would hide the taskbar again, so stop it first.
@@ -280,7 +280,7 @@ func main() {
 		case "--remove-autostart":
 			setAutostart(false)
 		default:
-			log.Printf("unknown option %q (use --stop, --restore, --install-autostart, --remove-autostart)", os.Args[1])
+			log.Printf("unknown option %q (use --quit, --restore, --install-autostart, --remove-autostart)", os.Args[1])
 		}
 		return
 	}

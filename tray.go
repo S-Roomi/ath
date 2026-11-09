@@ -79,7 +79,7 @@ const (
 	cmdAutostart = iota + 1
 	cmdOpenConfig
 	cmdOpenLog
-	cmdStop
+	cmdQuit
 	cmdRestore
 	cmdPause
 )
@@ -145,7 +145,7 @@ var (
 	trayIcon          uintptr
 	trayStopEv        uintptr
 	taskbarCreatedMsg uintptr
-	restoreOnExit     atomic.Bool // set by the "Stop and restore taskbar" menu item
+	restoreOnExit     atomic.Bool // set by the "Quit and Restore taskbar" menu item
 	paused            atomic.Bool // set by the "Pause" menu item; read by the main loop
 	trayClassName     = "ATH.TrayWindow"
 )
@@ -176,7 +176,7 @@ var trayWndProc = syscall.NewCallback(func(hwnd, msg, wParam, lParam uintptr) ui
 })
 
 // startTray creates the notification-area icon on its own OS-locked thread
-// with a message loop. Choosing Stop sets stopEv. It returns a func that
+// with a message loop. Choosing Quit sets stopEv. It returns a func that
 // removes the icon and ends the thread, and ok=false if the icon could not
 // be created (the watcher keeps running without it).
 func startTray(stopEv uintptr) (stop func(), ok bool) {
@@ -292,8 +292,8 @@ func showTrayMenu(hwnd uintptr) {
 	appendItem(mfString, cmdOpenConfig, "Open config")
 	appendItem(mfString, cmdOpenLog, "Open log")
 	pAppendMenuW.Call(menu, mfSeparator, 0, 0)
-	appendItem(mfString, cmdRestore, "Stop and restore taskbar")
-	appendItem(mfString, cmdStop, "Stop")
+	appendItem(mfString, cmdRestore, "Quit and Restore taskbar")
+	appendItem(mfString, cmdQuit, "Quit")
 
 	var pt struct{ X, Y int32 }
 	pGetCursorPos.Call(uintptr(unsafe.Pointer(&pt)))
@@ -326,11 +326,11 @@ func handleTrayCommand(cmd uintptr) {
 	case cmdOpenLog:
 		openFile(filepath.Join(exeDir, logFileName))
 	case cmdRestore:
-		log.Println("tray: stop and restore taskbar")
+		log.Println("tray: quit and restore taskbar")
 		restoreOnExit.Store(true)
 		pSetEvent.Call(trayStopEv)
-	case cmdStop:
-		log.Println("tray: stop")
+	case cmdQuit:
+		log.Println("tray: quit")
 		pSetEvent.Call(trayStopEv)
 	}
 }

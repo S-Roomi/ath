@@ -36,8 +36,8 @@ GOOS=windows GOARCH=amd64 go build -ldflags "-H=windowsgui -s -w" -o ath.exe
 | Command | What it does |
 | --- | --- |
 | `ath.exe` | Start the background watcher |
-| `ath.exe --stop` | Stop the running instance |
-| `ath.exe --restore` | Stop the running instance and force the taskbar to show |
+| `ath.exe --quit` | Quit the running instance |
+| `ath.exe --restore` | Quit the running instance and force the taskbar to show |
 | `ath.exe --install-autostart` | Start automatically at login |
 | `ath.exe --remove-autostart` | Remove autostart |
 
@@ -53,8 +53,8 @@ While it runs, ATH shows an icon in the notification area (it may be in the over
 | Start with Windows | On/off check for autostart, same as `--install-autostart` / `--remove-autostart` |
 | Open config | Opens `config.json` (in Notepad if no app is set for `.json`) |
 | Open log | Opens `ath.log` |
-| Stop and restore taskbar | Same as `--restore` |
-| Stop | Same as `--stop` |
+| Quit and Restore taskbar | Same as `--restore` |
+| Quit | Same as `--quit` |
 
 Set `tray_icon` to `false` to run without the icon.
 
