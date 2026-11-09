@@ -56,6 +56,61 @@ func loadConfig(path string) (Config, error) {
 	return cfg, nil
 }
 
+// addToIgnore adds proc to the ignore list in the config file at path. It
+// edits only the "ignore" key, so other keys (including unknown ones) keep
+// their values; key order may change. If the file has no "ignore" key, the
+// default list is kept and proc is added to it. It returns false if proc was
+// already ignored.
+func addToIgnore(path, proc string) (bool, error) {
+	raw := map[string]json.RawMessage{}
+	data, err := os.ReadFile(path)
+	switch {
+	case err == nil:
+		// Refuse to rewrite a file we cannot parse, so the user's edits are not lost.
+		if err := json.Unmarshal(data, &raw); err != nil {
+			return false, err
+		}
+	case os.IsNotExist(err):
+		data, _ = json.Marshal(defaultConfig())
+		_ = json.Unmarshal(data, &raw)
+	default:
+		return false, err
+	}
+
+	list := defaultConfig().Ignore
+	if v, ok := raw["ignore"]; ok {
+		list = nil
+		if err := json.Unmarshal(v, &list); err != nil {
+			return false, err
+		}
+	}
+	for _, p := range list {
+		if strings.EqualFold(p, proc) {
+			return false, nil
+		}
+	}
+	list = append(list, proc)
+	if raw["ignore"], err = json.Marshal(list); err != nil {
+		return false, err
+	}
+
+	out, err := json.MarshalIndent(raw, "", "  ")
+	if err != nil {
+		return false, err
+	}
+	// Write a temp file and rename it over the config, so a reader never sees
+	// a half-written file.
+	tmp := path + ".tmp"
+	if err := os.WriteFile(tmp, out, 0o644); err != nil {
+		return false, err
+	}
+	if err := os.Rename(tmp, path); err != nil {
+		_ = os.Remove(tmp)
+		return false, err
+	}
+	return true, nil
+}
+
 func writeDefaultConfig(path string) {
 	data, _ := json.MarshalIndent(defaultConfig(), "", "  ")
 	_ = os.WriteFile(path, data, 0o644)

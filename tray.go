@@ -82,6 +82,7 @@ const (
 	cmdQuit
 	cmdRestore
 	cmdPause
+	cmdIgnoreLast
 )
 
 type wndClassEx struct {
@@ -145,8 +146,10 @@ var (
 	trayIcon          uintptr
 	trayStopEv        uintptr
 	taskbarCreatedMsg uintptr
-	restoreOnExit     atomic.Bool // set by the "Quit and Restore taskbar" menu item
-	paused            atomic.Bool // set by the "Pause" menu item; read by the main loop
+	restoreOnExit     atomic.Bool            // set by the "Quit and Restore taskbar" menu item
+	paused            atomic.Bool            // set by the "Pause" menu item; read by the main loop
+	reloadConfig      atomic.Bool            // set after the tray edits config.json; the main loop reloads at once
+	lastFullscreen    atomic.Pointer[string] // process name of the last fullscreen app; written by the main loop
 	trayClassName     = "ATH.TrayWindow"
 )
 
@@ -283,6 +286,18 @@ func showTrayMenu(hwnd uintptr) {
 	} else {
 		appendItem(mfString, cmdPause, "Pause")
 	}
+	// Read the last fullscreen app now: the main loop recorded it before the
+	// menu made ATH the foreground window.
+	var lastProc string
+	if p := lastFullscreen.Load(); p != nil {
+		lastProc = *p
+	}
+	if lastProc != "" {
+		// "&" marks a menu shortcut key, so double it to show it literally.
+		appendItem(mfString, cmdIgnoreLast, "Never hide for "+strings.ReplaceAll(lastProc, "&", "&&"))
+	} else {
+		appendItem(mfString|mfGrayed, 0, "Never hide for this app")
+	}
 	pAppendMenuW.Call(menu, mfSeparator, 0, 0)
 	autoFlags := uintptr(mfString)
 	if autostartEnabled() {
@@ -303,12 +318,31 @@ func showTrayMenu(hwnd uintptr) {
 		uintptr(pt.X), uintptr(pt.Y), 0, hwnd, 0)
 	pPostMessageW.Call(hwnd, wmNull, 0, 0)
 	if cmd != 0 {
-		handleTrayCommand(cmd)
+		handleTrayCommand(cmd, lastProc)
 	}
 }
 
-func handleTrayCommand(cmd uintptr) {
+// handleTrayCommand runs a menu command. lastProc is the app the "Never hide
+// for ..." item was shown for.
+func handleTrayCommand(cmd uintptr, lastProc string) {
 	switch cmd {
+	case cmdIgnoreLast:
+		added, err := addToIgnore(filepath.Join(exeDir, "config.json"), lastProc)
+		switch {
+		case err != nil:
+			log.Printf("tray: could not add %s to ignore: %v", lastProc, err)
+			return
+		case added:
+			log.Printf("tray: added %s to ignore", lastProc)
+		default:
+			log.Printf("tray: %s is already in ignore", lastProc)
+		}
+		// The app is ignored now, so stop offering it in the menu. Then have
+		// the main loop reload the config at once, which shows the taskbar
+		// if this app is still in front.
+		lastFullscreen.Store(nil)
+		reloadConfig.Store(true)
+		pSetEvent.Call(wakeEv)
 	case cmdPause:
 		p := !paused.Load()
 		paused.Store(p)

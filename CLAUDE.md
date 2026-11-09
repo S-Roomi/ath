@@ -42,6 +42,7 @@ Go 1.22 (`go.mod`). The user compiles and tests on Windows themselves, so hand c
 - `--quit` (old name `--stop`, still accepted) sets a named event. `--restore` stops the running instance, then shows all taskbars.
 - The tray menu's Quit sets the same stop event. "Quit and Restore taskbar" also sets `restoreOnExit`, so `run()` shows every taskbar on the way out.
 - The tray menu's Pause/Resume flips the `paused` atomic and sets the wake event. While paused, the loop's target is "off" with a delay of 0, so a taskbar ATH hid comes back at once and nothing new is hidden.
+- "Never hide for <app>": the main loop stores the last fullscreen process in `lastFullscreen`, because opening the menu makes ATH the foreground window. `addToIgnore` edits only the `ignore` key (unknown keys kept, unparseable file left alone) via temp file + rename, then the tray sets `reloadConfig` and the wake event so the loop reloads at once.
 
 ## Rules
 

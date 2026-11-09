@@ -44,6 +44,7 @@ While it runs, ATH shows an icon in the notification area (it may be in the over
 | Item | What it does |
 | --- | --- |
 | Pause / Resume | Stop hiding the taskbar without exiting. Pausing shows the taskbar at once if ATH hid it. Not remembered after a restart |
+| Never hide for *app* | Adds the last app that went fullscreen to `ignore` in `config.json`, and shows the taskbar if it is still in front. Grayed out until an app has gone fullscreen. Other settings are kept, but their order in the file may change |
 | Start with Windows | On/off check for autostart, same as `--install-autostart` / `--remove-autostart` |
 | Open config | Opens `config.json` (in Notepad if no app is set for `.json`) |
 | Open log | Opens `ath.log` |

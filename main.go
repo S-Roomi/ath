@@ -112,10 +112,11 @@ func run(cfgPath string) {
 			break
 		}
 
-		// Hot-reload config.
-		if time.Since(lastCfgCheck) > time.Second {
+		// Hot-reload config. The tray sets reloadConfig after editing the file,
+		// so that change applies now instead of after the once-a-second check.
+		if forced := reloadConfig.Swap(false); forced || time.Since(lastCfgCheck) > time.Second {
 			lastCfgCheck = time.Now()
-			if mt := modTime(cfgPath); !mt.Equal(cfgMod) {
+			if mt := modTime(cfgPath); forced || !mt.Equal(cfgMod) {
 				cfgMod = mt
 				if nc, err := loadConfig(cfgPath); err == nil {
 					cfg = nc
@@ -131,6 +132,15 @@ func run(cfgPath string) {
 		if key := fmt.Sprintf("%x|%v|%v|%s", fg.hwnd, fg.on, fg.shellUI, fg.note); fg.hwnd != 0 && key != lastLogKey {
 			lastLogKey = key
 			log.Printf("foreground: %s", fg)
+		}
+		// Remember the last fullscreen app for "Never hide for ..." in the tray
+		// menu. Opening the menu makes ATH the foreground window, so the tray
+		// cannot look this up itself at that point.
+		if fg.on {
+			if last := lastFullscreen.Load(); last == nil || *last != fg.proc {
+				proc := fg.proc
+				lastFullscreen.Store(&proc)
+			}
 		}
 
 		isPaused := paused.Load()
