@@ -17,6 +17,7 @@ type Config struct {
 	Reassert     bool     `json:"reassert"`       // hide the taskbar again if Explorer brings it back
 	Ignore       []string `json:"ignore"`         // process names that never trigger hiding
 	Whitelist    []string `json:"whitelist"`      // if non-empty, ONLY these processes trigger hiding
+	TrayIcon     bool     `json:"tray_icon"`      // show a notification-area icon (read at startup only)
 }
 
 func defaultConfig() Config {
@@ -28,6 +29,7 @@ func defaultConfig() Config {
 		Reassert:     true,
 		Ignore:       []string{"explorer.exe", "vlc.exe"},
 		Whitelist:    []string{},
+		TrayIcon:     true,
 	}
 }
 

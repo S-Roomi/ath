@@ -19,7 +19,9 @@ const (
 	mutexName      = `Local\ATH.Mutex`
 	stopEventName  = `Local\ATH.Stop`
 	markerFileName = "hidden.marker"
-	runKeyPath     = `HKCU\Software\Microsoft\Windows\CurrentVersion\Run`
+	logFileName    = "ath.log"
+	runSubKey      = `Software\Microsoft\Windows\CurrentVersion\Run`
+	runKeyPath     = `HKCU\` + runSubKey
 	runValueName   = "ATH"
 	reassertLogGap = 10 * time.Second // at most one "came back" log line per gap
 )
@@ -84,6 +86,14 @@ func run(cfgPath string) {
 	defer stopWatch()
 	if !hooked {
 		log.Println("could not install the foreground hook, polling only")
+	}
+
+	if cfg.TrayIcon {
+		if stopTray, ok := startTray(stopEv); ok {
+			defer stopTray()
+		} else {
+			log.Println("could not create the tray icon, running without it")
+		}
 	}
 
 	log.Printf("watching (poll %dms, enter %dms, leave %dms, per_monitor %v, reassert %v)",
@@ -180,7 +190,12 @@ func run(cfgPath string) {
 	}
 
 	// Clean exit: never leave the taskbar hidden behind us.
-	if weHid {
+	switch {
+	case restoreOnExit.Load():
+		// "Stop and restore taskbar" from the tray: same as --restore.
+		log.Println("exiting, forcing every taskbar to show")
+		showTaskbars(0)
+	case weHid:
 		log.Println("exiting, restoring taskbar")
 		showTaskbars(applied.mon)
 	}
@@ -228,7 +243,7 @@ func setAutostart(enable bool) {
 }
 
 func openLog() {
-	path := filepath.Join(exeDir, "ath.log")
+	path := filepath.Join(exeDir, logFileName)
 	if fi, err := os.Stat(path); err == nil && fi.Size() > 1<<20 {
 		_ = os.Remove(path) // simple size cap: start fresh past 1 MB
 	}
