@@ -15,6 +15,7 @@ ATH is a Windows-only Go background process (no visible window, no console; just
 | `taskbar.go` | Finds `Shell_TrayWnd` / `Shell_SecondaryTrayWnd`, hides with `SW_HIDE`, shows with `SW_SHOWNA` |
 | `winevent.go` | Out-of-context `SetWinEventHook` (foreground, minimize-end) on a locked OS thread with its own message loop; `waitStopOrWake` |
 | `tray.go` | Notification-area icon and right-click menu on its own locked OS thread with a hidden window; icon drawn at runtime (`drawIcon`); autostart state read from the registry |
+| `hotkey.go` | Pause shortcut: `parseHotkey()` and `RegisterHotKey` on its own locked OS thread with a message loop (hwnd 0, so `WM_HOTKEY` goes to that thread); re-registers on config reload |
 | `win32.go` | DLL/proc declarations, structs, constants, `utf16()`, `monitorOf()` |
 | `config.go` | `Config`, defaults, loading, file-change time |
 
@@ -41,7 +42,7 @@ Go 1.22 (`go.mod`). The user compiles and tests on Windows themselves, so hand c
 - `hidden.marker` next to the exe records "taskbar hidden". On startup, a leftover marker means a previous run died while hidden, so all taskbars are shown.
 - `--quit` (old name `--stop`, still accepted) sets a named event. `--restore` stops the running instance, then shows all taskbars.
 - The tray menu's Quit sets the same stop event. "Quit and Restore taskbar" also sets `restoreOnExit`, so `run()` shows every taskbar on the way out.
-- The tray menu's Pause/Resume flips the `paused` atomic and sets the wake event. While paused, the loop's target is "off" with a delay of 0, so a taskbar ATH hid comes back at once and nothing new is hidden.
+- The tray menu's Pause/Resume and the `hotkey` shortcut both call `togglePause()`, which flips the `paused` atomic and sets the wake event. The hotkey uses `RegisterHotKey` (allowed with anti-cheat; it is not a keyboard hook). While paused, the loop's target is "off" with a delay of 0, so a taskbar ATH hid comes back at once and nothing new is hidden.
 - "Never hide for <app>": the main loop stores the last fullscreen process in `lastFullscreen`, because opening the menu makes ATH the foreground window. `addToIgnore` edits only the `ignore` key (unknown keys kept, unparseable file left alone) via temp file + rename, then the tray sets `reloadConfig` and the wake event so the loop reloads at once.
 
 ## Rules

@@ -18,6 +18,7 @@ type Config struct {
 	Ignore       []string `json:"ignore"`         // process names that never trigger hiding
 	Whitelist    []string `json:"whitelist"`      // if non-empty, ONLY these processes trigger hiding
 	TrayIcon     bool     `json:"tray_icon"`      // show a notification-area icon (read at startup only)
+	Hotkey       string   `json:"hotkey"`         // shortcut that toggles Pause, e.g. "ctrl+alt+h"; "" turns it off
 }
 
 func defaultConfig() Config {
@@ -30,6 +31,7 @@ func defaultConfig() Config {
 		Ignore:       []string{"explorer.exe", "vlc.exe"},
 		Whitelist:    []string{},
 		TrayIcon:     true,
+		Hotkey:       "ctrl+alt+h",
 	}
 }
 

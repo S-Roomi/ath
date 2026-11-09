@@ -281,11 +281,14 @@ func showTrayMenu(hwnd uintptr) {
 	}
 	appendItem(mfString|mfGrayed, 0, "ATH")
 	pAppendMenuW.Call(menu, mfSeparator, 0, 0)
+	pauseText := "Pause"
 	if paused.Load() {
-		appendItem(mfString, cmdPause, "Resume")
-	} else {
-		appendItem(mfString, cmdPause, "Pause")
+		pauseText = "Resume"
 	}
+	if hk := activeHotkey.Load(); hk != nil {
+		pauseText += "\t" + *hk // a tab right-aligns the shortcut, like other menus
+	}
+	appendItem(mfString, cmdPause, pauseText)
 	// Read the last fullscreen app now: the main loop recorded it before the
 	// menu made ATH the foreground window.
 	var lastProc string
@@ -344,15 +347,7 @@ func handleTrayCommand(cmd uintptr, lastProc string) {
 		reloadConfig.Store(true)
 		pSetEvent.Call(wakeEv)
 	case cmdPause:
-		p := !paused.Load()
-		paused.Store(p)
-		if p {
-			log.Println("tray: paused")
-		} else {
-			log.Println("tray: resumed")
-		}
-		// Wake the main loop so the change applies now, not at the next poll.
-		pSetEvent.Call(wakeEv)
+		togglePause("tray")
 	case cmdAutostart:
 		setAutostart(!autostartEnabled())
 	case cmdOpenConfig:
@@ -367,6 +362,25 @@ func handleTrayCommand(cmd uintptr, lastProc string) {
 		log.Println("tray: quit")
 		pSetEvent.Call(trayStopEv)
 	}
+}
+
+// togglePause flips Pause/Resume. It is called from the tray menu and from
+// the hotkey thread; source is only for the log.
+func togglePause(source string) {
+	// Swap via CompareAndSwap so two sources at once cannot both flip to the same value.
+	for {
+		old := paused.Load()
+		if paused.CompareAndSwap(old, !old) {
+			if old {
+				log.Printf("%s: resumed", source)
+			} else {
+				log.Printf("%s: paused", source)
+			}
+			break
+		}
+	}
+	// Wake the main loop so the change applies now, not at the next poll.
+	pSetEvent.Call(wakeEv)
 }
 
 // openFile opens path with its associated app, falling back to Notepad when

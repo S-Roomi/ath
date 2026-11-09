@@ -88,6 +88,10 @@ func run(cfgPath string) {
 		log.Println("could not install the foreground hook, polling only")
 	}
 
+	// Keyboard shortcut that toggles Pause (RegisterHotKey, not a keyboard hook).
+	setHotkey, stopHotkey := startHotkey(cfg.Hotkey)
+	defer stopHotkey()
+
 	if cfg.TrayIcon {
 		if stopTray, ok := startTray(stopEv); ok {
 			defer stopTray()
@@ -119,6 +123,9 @@ func run(cfgPath string) {
 			if mt := modTime(cfgPath); forced || !mt.Equal(cfgMod) {
 				cfgMod = mt
 				if nc, err := loadConfig(cfgPath); err == nil {
+					if nc.Hotkey != cfg.Hotkey {
+						setHotkey(nc.Hotkey)
+					}
 					cfg = nc
 					log.Println("config reloaded")
 				} else {
