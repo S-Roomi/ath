@@ -6,7 +6,7 @@ A small background process for Windows that automatically hides the taskbar when
 
 - Windows tells it the moment the foreground window changes. It also checks every 300 ms as a fallback, for example for a window that resizes into fullscreen.
 - If the window covers its whole monitor, it hides the taskbar (on every monitor, or only that monitor with `per_monitor`).
-- When you switch away, it shows the taskbar again. If you open Start, Search, the notification center, quick settings or Alt-Tab, the taskbar comes back straight away, without the leave delay.
+- When you switch away, it shows the taskbar again. If you open Start, Search, the notification center, quick settings, the taskbar comes back straight away without the leave delay.
 - Every foreground change is written to the log with the window's process, class and size.
 - It only restores the taskbar if it was the one that hid it, and leaves a taskbar alone if something else already hid it.
 - If Explorer brings the taskbar back while a fullscreen app is still in front (for example after Explorer restarts), it hides it again.
@@ -23,12 +23,6 @@ On Windows:
 
 ```
 go build -ldflags "-H=windowsgui -s -w" -o ath.exe
-```
-
-From Linux or WSL:
-
-```
-GOOS=windows GOARCH=amd64 go build -ldflags "-H=windowsgui -s -w" -o ath.exe
 ```
 
 ## Usage
