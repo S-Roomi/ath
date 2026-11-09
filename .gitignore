@@ -1,1 +1,39 @@
-autothide.exe
+# Build output
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+/bin/
+/dist/
+
+# Runtime files written next to the exe
+ath.log
+config.json
+hidden.marker
+
+# Go test / profiling artifacts
+*.test
+*.out
+coverage.*
+*.prof
+
+# Go workspace (local only)
+go.work
+go.work.sum
+
+# Environment / secrets
+.env
+.env.*
+
+# Editors / IDEs
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS clutter
+.DS_Store
+Thumbs.db
+desktop.ini
