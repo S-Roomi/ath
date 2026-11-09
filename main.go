@@ -16,11 +16,11 @@ import (
 )
 
 const (
-	mutexName      = `Local\AutoTHide.Mutex`
-	stopEventName  = `Local\AutoTHide.Stop`
+	mutexName      = `Local\ATH.Mutex`
+	stopEventName  = `Local\ATH.Stop`
 	markerFileName = "hidden.marker"
 	runKeyPath     = `HKCU\Software\Microsoft\Windows\CurrentVersion\Run`
-	runValueName   = "AutoTHide"
+	runValueName   = "ATH"
 	reassertLogGap = 10 * time.Second // at most one "came back" log line per gap
 )
 
@@ -228,7 +228,7 @@ func setAutostart(enable bool) {
 }
 
 func openLog() {
-	path := filepath.Join(exeDir, "autothide.log")
+	path := filepath.Join(exeDir, "ath.log")
 	if fi, err := os.Stat(path); err == nil && fi.Size() > 1<<20 {
 		_ = os.Remove(path) // simple size cap: start fresh past 1 MB
 	}

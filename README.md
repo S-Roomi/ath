@@ -1,4 +1,4 @@
-# Auto THide
+# ATH
 
 A small background process for Windows that automatically hides the taskbar when a fullscreen or borderless app is in front, and brings it back when you leave. It hides the taskbar windows directly through the Win32 API, with no other tools needed.
 
@@ -22,26 +22,26 @@ A small background process for Windows that automatically hides the taskbar when
 On Windows:
 
 ```
-go build -ldflags "-H=windowsgui -s -w" -o autothide.exe
+go build -ldflags "-H=windowsgui -s -w" -o ath.exe
 ```
 
 From Linux or WSL:
 
 ```
-GOOS=windows GOARCH=amd64 go build -ldflags "-H=windowsgui -s -w" -o autothide.exe
+GOOS=windows GOARCH=amd64 go build -ldflags "-H=windowsgui -s -w" -o ath.exe
 ```
 
 ## Usage
 
 | Command | What it does |
 | --- | --- |
-| `autothide.exe` | Start the background watcher |
-| `autothide.exe --stop` | Stop the running instance |
-| `autothide.exe --restore` | Stop the running instance and force the taskbar to show |
-| `autothide.exe --install-autostart` | Start automatically at login |
-| `autothide.exe --remove-autostart` | Remove autostart |
+| `ath.exe` | Start the background watcher |
+| `ath.exe --stop` | Stop the running instance |
+| `ath.exe --restore` | Stop the running instance and force the taskbar to show |
+| `ath.exe --install-autostart` | Start automatically at login |
+| `ath.exe --remove-autostart` | Remove autostart |
 
-The exe has no window and prints nothing. Check `autothide.log` (in the same folder as the exe).
+The exe has no window and prints nothing. Check `ath.log` (in the same folder as the exe).
 
 ## Config
 
