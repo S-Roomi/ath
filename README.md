@@ -43,6 +43,20 @@ GOOS=windows GOARCH=amd64 go build -ldflags "-H=windowsgui -s -w" -o ath.exe
 
 The exe has no window and prints nothing. Check `ath.log` (in the same folder as the exe).
 
+### Tray icon
+
+While it runs, ATH shows an icon in the notification area (it may be in the overflow behind the `^` arrow). Right-click or left-click it for:
+
+| Item | What it does |
+| --- | --- |
+| Start with Windows | On/off check for autostart, same as `--install-autostart` / `--remove-autostart` |
+| Open config | Opens `config.json` (in Notepad if no app is set for `.json`) |
+| Open log | Opens `ath.log` |
+| Stop and restore taskbar | Same as `--restore` |
+| Stop | Same as `--stop` |
+
+Set `tray_icon` to `false` to run without the icon.
+
 ## Config
 
 `config.json` is created next to the exe on first run. Changes are picked up automatically.
@@ -56,5 +70,6 @@ The exe has no window and prints nothing. Check `ath.log` (in the same folder as
 | `poll_ms` | 300 | How often to check the foreground window |
 | `enter_delay_ms` | 500 | Wait before hiding |
 | `leave_delay_ms` | 400 | Wait before showing |
+| `tray_icon` | `true` | Show the notification-area icon. Read at startup only, so restart ATH after changing it |
 
 Older config files that still have the `thide_*` settings keep working; those keys are ignored.

@@ -4,7 +4,7 @@ Notes for AI coding agents working on this repo. User-facing docs are in `README
 
 ## What this is
 
-ATH is a Windows-only Go background process (no window, no console). It hides the taskbar while a fullscreen or borderless app is in front and shows it again when the user leaves. It has no dependencies outside the standard library and talks to Win32 directly through `syscall.NewLazyDLL`.
+ATH is a Windows-only Go background process (no visible window, no console; just a notification-area icon). It hides the taskbar while a fullscreen or borderless app is in front and shows it again when the user leaves. It has no dependencies outside the standard library and talks to Win32 directly through `syscall.NewLazyDLL`.
 
 ## Layout
 
@@ -14,6 +14,7 @@ ATH is a Windows-only Go background process (no window, no console). It hides th
 | `detect.go` | `detectForeground()`: fullscreen test, shell-UI classification (`shellUIProcs`, `shellUIClasses`), ignore/whitelist |
 | `taskbar.go` | Finds `Shell_TrayWnd` / `Shell_SecondaryTrayWnd`, hides with `SW_HIDE`, shows with `SW_SHOWNA` |
 | `winevent.go` | Out-of-context `SetWinEventHook` (foreground, minimize-end) on a locked OS thread with its own message loop; `waitStopOrWake` |
+| `tray.go` | Notification-area icon and right-click menu on its own locked OS thread with a hidden window; icon drawn at runtime (`drawIcon`); autostart state read from the registry |
 | `win32.go` | DLL/proc declarations, structs, constants, `utf16()`, `monitorOf()` |
 | `config.go` | `Config`, defaults, loading, file-change time |
 
@@ -39,6 +40,7 @@ Go 1.22 (`go.mod`). The user compiles and tests on Windows themselves, so hand c
 - `reassert` re-hides the taskbar while the applied state is unchanged and Explorer has shown it again (e.g. after Explorer restarts).
 - `hidden.marker` next to the exe records "taskbar hidden". On startup, a leftover marker means a previous run died while hidden, so all taskbars are shown.
 - `--stop` sets a named event. `--restore` stops the running instance, then shows all taskbars.
+- The tray menu's Stop sets the same stop event. "Stop and restore taskbar" also sets `restoreOnExit`, so `run()` shows every taskbar on the way out.
 
 ## Rules
 
@@ -50,7 +52,8 @@ Go 1.22 (`go.mod`). The user compiles and tests on Windows themselves, so hand c
 - **No thide:** the tool used to call thide. It no longer does; don't reintroduce it or any other external tool.
 - **Data files:** `config.json`, `ath.log` and `hidden.marker` always live next to the exe. Don't add a fallback directory such as `%LOCALAPPDATA%`; the user removed one on purpose.
 - **Config:** new settings go in `Config` and `defaultConfig()`, with a JSON tag and a row in the README config table. Missing keys keep their defaults and unknown keys are ignored, so old config files must keep working.
-- **Logging:** the program has no UI, so `ath.log` is the only way to see what it did. Log state changes, not every tick.
+- **Tray:** the icon must be re-added on the `TaskbarCreated` message (Explorer restarts are common here) and removed with `NIM_DELETE` on exit, or a dead icon is left behind. There is no `.ico` resource (stdlib-only build), so the icon is drawn in code.
+- **Logging:** the tray menu is the only UI, so `ath.log` is the main way to see what it did. Log state changes, not every tick.
 
 ## Git
 
@@ -58,4 +61,3 @@ Go 1.22 (`go.mod`). The user compiles and tests on Windows themselves, so hand c
 - Prefer several focused commits over one large one.
 - Don't add attribution lines to commit messages.
 - Commit or push only when asked.
-- `ath.exe` is gitignored.
