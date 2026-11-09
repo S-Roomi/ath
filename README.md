@@ -49,6 +49,7 @@ While it runs, ATH shows an icon in the notification area (it may be in the over
 
 | Item | What it does |
 | --- | --- |
+| Pause / Resume | Stop hiding the taskbar without exiting. Pausing shows the taskbar at once if ATH hid it. Not remembered after a restart |
 | Start with Windows | On/off check for autostart, same as `--install-autostart` / `--remove-autostart` |
 | Open config | Opens `config.json` (in Notepad if no app is set for `.json`) |
 | Open log | Opens `ath.log` |

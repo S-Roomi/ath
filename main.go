@@ -133,8 +133,9 @@ func run(cfgPath string) {
 			log.Printf("foreground: %s", fg)
 		}
 
-		want := target{on: fg.on}
-		if fg.on && cfg.PerMonitor {
+		isPaused := paused.Load()
+		want := target{on: fg.on && !isPaused}
+		if want.on && cfg.PerMonitor {
 			want.mon = fg.mon
 		}
 
@@ -158,8 +159,8 @@ func run(cfgPath string) {
 		switch {
 		case want.on:
 			pendingDelay = time.Duration(cfg.EnterDelayMs) * time.Millisecond
-		case fg.shellUI:
-			pendingDelay = 0 // Start, Search or a flyout opened: show the taskbar now
+		case fg.shellUI || isPaused:
+			pendingDelay = 0 // Start, Search, a flyout or Pause: show the taskbar now
 		default:
 			pendingDelay = time.Duration(cfg.LeaveDelayMs) * time.Millisecond
 		}

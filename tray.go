@@ -81,6 +81,7 @@ const (
 	cmdOpenLog
 	cmdStop
 	cmdRestore
+	cmdPause
 )
 
 type wndClassEx struct {
@@ -145,6 +146,7 @@ var (
 	trayStopEv        uintptr
 	taskbarCreatedMsg uintptr
 	restoreOnExit     atomic.Bool // set by the "Stop and restore taskbar" menu item
+	paused            atomic.Bool // set by the "Pause" menu item; read by the main loop
 	trayClassName     = "ATH.TrayWindow"
 )
 
@@ -276,6 +278,12 @@ func showTrayMenu(hwnd uintptr) {
 	}
 	appendItem(mfString|mfGrayed, 0, "ATH")
 	pAppendMenuW.Call(menu, mfSeparator, 0, 0)
+	if paused.Load() {
+		appendItem(mfString, cmdPause, "Resume")
+	} else {
+		appendItem(mfString, cmdPause, "Pause")
+	}
+	pAppendMenuW.Call(menu, mfSeparator, 0, 0)
 	autoFlags := uintptr(mfString)
 	if autostartEnabled() {
 		autoFlags |= mfChecked
@@ -301,6 +309,16 @@ func showTrayMenu(hwnd uintptr) {
 
 func handleTrayCommand(cmd uintptr) {
 	switch cmd {
+	case cmdPause:
+		p := !paused.Load()
+		paused.Store(p)
+		if p {
+			log.Println("tray: paused")
+		} else {
+			log.Println("tray: resumed")
+		}
+		// Wake the main loop so the change applies now, not at the next poll.
+		pSetEvent.Call(wakeEv)
 	case cmdAutostart:
 		setAutostart(!autostartEnabled())
 	case cmdOpenConfig:
