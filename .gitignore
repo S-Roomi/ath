@@ -37,3 +37,6 @@ go.work.sum
 .DS_Store
 Thumbs.db
 desktop.ini
+
+# Local planning notes
+ROADMAP.md
