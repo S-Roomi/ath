@@ -1,6 +1,6 @@
-# AGENT.md
+# CLAUDE.md
 
-Notes for AI coding agents working on this repo. User-facing docs are in `README.md`.
+Notes for Claude Code (and other AI coding agents) working on this repo. User-facing docs are in `README.md`.
 
 ## What this is
 
@@ -39,8 +39,9 @@ Go 1.22 (`go.mod`). The user compiles and tests on Windows themselves, so hand c
 - `weHid` tracks whether this process hid the taskbar. Never show a taskbar this process didn't hide, and never hide one that something else already hid.
 - `reassert` re-hides the taskbar while the applied state is unchanged and Explorer has shown it again (e.g. after Explorer restarts).
 - `hidden.marker` next to the exe records "taskbar hidden". On startup, a leftover marker means a previous run died while hidden, so all taskbars are shown.
-- `--stop` sets a named event. `--restore` stops the running instance, then shows all taskbars.
-- The tray menu's Stop sets the same stop event. "Stop and restore taskbar" also sets `restoreOnExit`, so `run()` shows every taskbar on the way out.
+- `--quit` (old name `--stop`, still accepted) sets a named event. `--restore` stops the running instance, then shows all taskbars.
+- The tray menu's Quit sets the same stop event. "Quit and Restore taskbar" also sets `restoreOnExit`, so `run()` shows every taskbar on the way out.
+- The tray menu's Pause/Resume flips the `paused` atomic and sets the wake event. While paused, the loop's target is "off" with a delay of 0, so a taskbar ATH hid comes back at once and nothing new is hidden.
 
 ## Rules
 
