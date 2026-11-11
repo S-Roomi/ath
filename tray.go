@@ -50,6 +50,9 @@ const (
 	wmRButtonUp  = 0x0205
 	wmApp        = 0x8000
 	wmTrayNotify = wmApp + 1
+	// Posted to the tray window by a second ATH launch (another process), so
+	// it must not carry pointers.
+	wmShowRunning = wmApp + 3
 
 	nimAdd     = 0
 	nimModify  = 1
@@ -57,6 +60,8 @@ const (
 	nifMessage = 0x1
 	nifIcon    = 0x2
 	nifTip     = 0x4
+	nifInfo    = 0x10
+	niifInfo   = 0x1 // "information" icon in the balloon
 
 	mfString    = 0x0000
 	mfGrayed    = 0x0001
@@ -161,6 +166,9 @@ var trayWndProc = syscall.NewCallback(func(hwnd, msg, wParam, lParam uintptr) ui
 			showTrayMenu(hwnd)
 		}
 		return 0
+	case wmShowRunning:
+		showRunningBalloon()
+		return 0
 	case wmClose:
 		removeTrayIcon()
 		pDestroyWindow.Call(hwnd)
@@ -261,6 +269,39 @@ func addTrayIcon() bool {
 		// Already present (e.g. TaskbarCreated sent without a real restart): update it.
 		r, _, _ = pShellNotifyIconW.Call(nimModify, uintptr(unsafe.Pointer(&nid)))
 	}
+	return r != 0
+}
+
+// showRunningBalloon shows an "ATH is already running" notification from the
+// tray icon. It runs when ATH is launched a second time.
+func showRunningBalloon() {
+	nid := trayData()
+	nid.UFlags = nifInfo
+	nid.DwInfoFlags = niifInfo
+	text := "Right-click the ATH icon in the notification area for options."
+	if paused.Load() {
+		text = "Hiding is paused. " + text
+	}
+	title, _ := syscall.UTF16FromString("ATH is already running")
+	info, _ := syscall.UTF16FromString(text)
+	copy(nid.SzInfoTitle[:len(nid.SzInfoTitle)-1], title)
+	copy(nid.SzInfo[:len(nid.SzInfo)-1], info)
+	if r, _, err := pShellNotifyIconW.Call(nimModify, uintptr(unsafe.Pointer(&nid))); r == 0 {
+		log.Printf("tray: could not show the already-running notification: %v", err)
+		return
+	}
+	log.Println("tray: launched again, showed the already-running notification")
+}
+
+// notifyRunningInstance is called by a second launch. It finds the running
+// instance's tray window by class and asks it to show the notification.
+// It returns false when there is no tray window (e.g. tray_icon is off).
+func notifyRunningInstance() bool {
+	h := findWindowEx(0, trayClassName)
+	if h == 0 {
+		return false
+	}
+	r, _, _ := pPostMessageW.Call(h, wmShowRunning, 0, 0)
 	return r != 0
 }
 

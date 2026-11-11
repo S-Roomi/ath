@@ -38,6 +38,8 @@ go build -ldflags "-H=windowsgui -s -w" -o ath.exe
 
 The exe has no window and prints nothing. Check `ath.log` (in the same folder as the exe).
 
+Starting `ath.exe` while it is already running shows an "ATH is already running" notification from the tray icon instead of starting a second copy. With `tray_icon` off, the second launch just exits (and logs it).
+
 ### Tray icon
 
 While it runs, ATH shows an icon in the notification area (it may be in the overflow behind the `^` arrow). Right-click or left-click it for:

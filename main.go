@@ -303,7 +303,11 @@ func main() {
 	}
 
 	if !singleInstance() {
-		log.Println("another instance is already running, exiting")
+		if notifyRunningInstance() {
+			log.Println("another instance is already running, asked it to show a notification, exiting")
+		} else {
+			log.Println("another instance is already running (without a tray icon), exiting")
+		}
 		return
 	}
 	run(cfgPath)
