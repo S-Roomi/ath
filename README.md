@@ -71,5 +71,3 @@ Set `tray_icon` to `false` to run without the icon.
 | `leave_delay_ms` | 400 | Wait before showing |
 | `tray_icon` | `true` | Show the notification-area icon. Read at startup only, so restart ATH after changing it |
 | `hotkey` | `"ctrl+alt+h"` | Shortcut that toggles Pause / Resume, even without the tray icon. Modifiers `ctrl`, `alt`, `shift`, `win`, plus a letter, a digit or `f1`-`f24` (letters and digits need a modifier). `""` turns it off. If another app already uses the combination, it is not registered and the log says so |
-
-Older config files that still have the `thide_*` settings keep working; those keys are ignored.
