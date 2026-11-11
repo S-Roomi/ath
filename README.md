@@ -28,6 +28,14 @@ go build -ldflags "-H=windowsgui -s -w" -o bin/ath.exe
 
 This puts the exe in `bin/` (ignored by git). `config.json`, `ath.log` and `hidden.marker` are created next to the exe, so they end up in `bin/` too and the source folder stays clean. You can copy `ath.exe` anywhere else; its files follow it.
 
+For a release, set the version number at build time:
+
+```
+go build -ldflags "-H=windowsgui -s -w -X main.version=v1.1.0" -o bin/ath.exe
+```
+
+Without `-X`, the build reports itself as `dev` plus the git commit it was built from, for example `dev (5023b7d)`.
+
 ## Usage
 
 | Command | What it does |
@@ -37,6 +45,7 @@ This puts the exe in `bin/` (ignored by git). `config.json`, `ath.log` and `hidd
 | `ath.exe --restore` | Quit the running instance and force the taskbar to show |
 | `ath.exe --install-autostart` | Start automatically at login |
 | `ath.exe --remove-autostart` | Remove autostart |
+| `ath.exe --version` | Show the version (printed in a command prompt, or in a message box when started from Explorer). It is also shown at the top of the tray menu and in `ath.log` |
 
 The exe has no window and prints nothing. Check `ath.log` (in the same folder as the exe).
 

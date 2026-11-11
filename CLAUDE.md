@@ -18,6 +18,7 @@ ATH is a Windows-only Go background process (no visible window, no console; just
 | `hotkey.go` | Pause shortcut: `parseHotkey()` and `RegisterHotKey` on its own locked OS thread with a message loop (hwnd 0, so `WM_HOTKEY` goes to that thread); re-registers on config reload |
 | `win32.go` | DLL/proc declarations, structs, constants, `utf16()`, `monitorOf()` |
 | `config.go` | `Config`, defaults, loading, file-change time |
+| `version.go` | `version` (set with `-ldflags "-X main.version=vX.Y.Z"`, else `dev` + git commit from build info), `--version` output via the parent console or a message box |
 
 Every `.go` file starts with `//go:build windows`.
 
@@ -31,7 +32,7 @@ GOOS=windows GOARCH=amd64 go vet ./...
 GOOS=windows GOARCH=amd64 go build -ldflags "-H=windowsgui -s -w" -o bin/ath.exe
 ```
 
-Build into `bin/` (gitignored), never the repo root: the exe writes `config.json`, `ath.log` and `hidden.marker` next to itself, so a root build litters the source folder. The code stays a flat `package main` at the root on purpose; split into packages only for a real reason (e.g. testable detection logic, ROADMAP item 11).
+Build into `bin/` (gitignored), never the repo root: the exe writes `config.json`, `ath.log` and `hidden.marker` next to itself, so a root build litters the source folder. Release builds add `-X main.version=vX.Y.Z` to `-ldflags`. The code stays a flat `package main` at the root on purpose; split into packages only for a real reason (e.g. testable detection logic, ROADMAP item 11).
 
 Go 1.22 (`go.mod`). The user compiles and tests on Windows themselves, so hand changes back with a clear manual test list.
 

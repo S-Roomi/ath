@@ -320,7 +320,7 @@ func showTrayMenu(hwnd uintptr) {
 	appendItem := func(flags, id uintptr, text string) {
 		pAppendMenuW.Call(menu, flags, id, uintptr(unsafe.Pointer(utf16(text))))
 	}
-	appendItem(mfString|mfGrayed, 0, "ATH")
+	appendItem(mfString|mfGrayed, 0, "ATH "+versionString())
 	pAppendMenuW.Call(menu, mfSeparator, 0, 0)
 	pauseText := "Pause"
 	if paused.Load() {

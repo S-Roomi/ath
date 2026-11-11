@@ -100,8 +100,8 @@ func run(cfgPath string) {
 		}
 	}
 
-	log.Printf("watching (poll %dms, enter %dms, leave %dms, per_monitor %v, reassert %v)",
-		cfg.PollMs, cfg.EnterDelayMs, cfg.LeaveDelayMs, cfg.PerMonitor, cfg.Reassert)
+	log.Printf("ATH %s watching (poll %dms, enter %dms, leave %dms, per_monitor %v, reassert %v)",
+		versionString(), cfg.PollMs, cfg.EnterDelayMs, cfg.LeaveDelayMs, cfg.PerMonitor, cfg.Reassert)
 
 	for {
 		// Wait one poll interval, or less if a pending state is due sooner, so
@@ -296,8 +296,10 @@ func main() {
 			setAutostart(true)
 		case "--remove-autostart":
 			setAutostart(false)
+		case "--version":
+			showVersion()
 		default:
-			log.Printf("unknown option %q (use --quit, --restore, --install-autostart, --remove-autostart)", os.Args[1])
+			log.Printf("unknown option %q (use --quit, --restore, --install-autostart, --remove-autostart, --version)", os.Args[1])
 		}
 		return
 	}
