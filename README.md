@@ -23,8 +23,10 @@ A small background process for Windows that automatically hides the taskbar when
 On Windows:
 
 ```
-go build -ldflags "-H=windowsgui -s -w" -o ath.exe
+go build -ldflags "-H=windowsgui -s -w" -o bin/ath.exe
 ```
+
+This puts the exe in `bin/` (ignored by git). `config.json`, `ath.log` and `hidden.marker` are created next to the exe, so they end up in `bin/` too and the source folder stays clean. You can copy `ath.exe` anywhere else; its files follow it.
 
 ## Usage
 
