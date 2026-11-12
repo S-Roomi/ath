@@ -262,7 +262,7 @@ func addTrayIcon() bool {
 	nid.UFlags = nifMessage | nifIcon | nifTip
 	nid.UCallbackMessage = wmTrayNotify
 	nid.HIcon = trayIcon
-	tip, _ := syscall.UTF16FromString("ATH - auto-hide taskbar")
+	tip, _ := syscall.UTF16FromString("ATH")
 	copy(nid.SzTip[:len(nid.SzTip)-1], tip)
 	r, _, _ := pShellNotifyIconW.Call(nimAdd, uintptr(unsafe.Pointer(&nid)))
 	if r == 0 {
