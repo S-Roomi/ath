@@ -58,6 +58,7 @@ While it runs, ATH shows an icon in the notification area (it may be in the over
 | Item | What it does |
 | --- | --- |
 | Pause / Resume | Stop hiding the taskbar without exiting. The `hotkey` shortcut (Ctrl+Alt+H by default) does the same and is shown next to the item. Pausing shows the taskbar at once if ATH hid it. Not remembered after a restart |
+| Keep taskbar hidden | Hide the taskbar whatever is in front, fullscreen or not, until you turn it off. The `hide_hotkey` shortcut (Ctrl+Alt+T by default) does the same and is shown next to the item; a check mark shows it is on. Start, Search and flyouts still bring the taskbar back while they are open. Pause wins over it. Not remembered after a restart |
 | Never hide for *app* | Adds the last app that went fullscreen to `ignore` in `config.json`, and shows the taskbar if it is still in front. Grayed out until an app has gone fullscreen. Other settings are kept, but their order in the file may change |
 | Start with Windows | On/off check for autostart, same as `--install-autostart` / `--remove-autostart` |
 | Open config | Opens `config.json` (in Notepad if no app is set for `.json`) |
@@ -82,3 +83,4 @@ Set `tray_icon` to `false` to run without the icon.
 | `leave_delay_ms` | 400 | Wait before showing |
 | `tray_icon` | `true` | Show the notification-area icon. Read at startup only, so restart ATH after changing it |
 | `hotkey` | `"ctrl+alt+h"` | Shortcut that toggles Pause / Resume, even without the tray icon. Modifiers `ctrl`, `alt`, `shift`, `win`, plus a letter, a digit or `f1`-`f24` (letters and digits need a modifier). `""` turns it off. If another app already uses the combination, it is not registered and the log says so |
+| `hide_hotkey` | `"ctrl+alt+t"` | Shortcut that toggles Keep taskbar hidden. Same format as `hotkey`, and must differ from it. `""` turns it off |

@@ -73,6 +73,7 @@ func run(cfgPath string) {
 
 	var applied, pending target // state in effect / state waiting to be applied
 	weHid := false              // true only if THIS process hid the taskbar
+	forcedHid := false          // the applied hide came from Keep taskbar hidden
 	var pendingSince, lastReassertLog time.Time
 	var pendingDelay time.Duration // delay the pending state must hold before it is applied
 	var lastLogKey string
@@ -88,9 +89,9 @@ func run(cfgPath string) {
 		log.Println("could not install the foreground hook, polling only")
 	}
 
-	// Keyboard shortcut that toggles Pause (RegisterHotKey, not a keyboard hook).
-	setHotkey, stopHotkey := startHotkey(cfg.Hotkey)
-	defer stopHotkey()
+	// Keyboard shortcuts for Pause and Keep taskbar hidden (RegisterHotKey, not a keyboard hook).
+	setHotkeys, stopHotkeys := startHotkeys(hotkeys{cfg.Hotkey, cfg.HideHotkey})
+	defer stopHotkeys()
 
 	if cfg.TrayIcon {
 		if stopTray, ok := startTray(stopEv); ok {
@@ -123,8 +124,8 @@ func run(cfgPath string) {
 			if mt := modTime(cfgPath); forced || !mt.Equal(cfgMod) {
 				cfgMod = mt
 				if nc, err := loadConfig(cfgPath); err == nil {
-					if nc.Hotkey != cfg.Hotkey {
-						setHotkey(nc.Hotkey)
+					if nc.Hotkey != cfg.Hotkey || nc.HideHotkey != cfg.HideHotkey {
+						setHotkeys(hotkeys{nc.Hotkey, nc.HideHotkey})
 					}
 					cfg = nc
 					log.Println("config reloaded")
@@ -150,14 +151,21 @@ func run(cfgPath string) {
 			}
 		}
 
+		// "Keep taskbar hidden" hides every taskbar whatever is in front, except
+		// while Start, Search or a flyout is open. Pause wins over it.
 		isPaused := paused.Load()
-		want := target{on: fg.on && !isPaused}
-		if want.on && cfg.PerMonitor {
+		isForced := forceHide.Load()
+		forcedNow := isForced && !fg.shellUI
+		want := target{on: (fg.on || forcedNow) && !isPaused}
+		if want.on && cfg.PerMonitor && !forcedNow {
 			want.mon = fg.mon
 		}
 
 		if want == applied {
 			pending = applied
+			// E.g. Keep taskbar hidden turned off while a fullscreen app is in
+			// front: the taskbar stays hidden, now for the fullscreen app.
+			forcedHid = applied.on && forcedNow
 			// Explorer shows the taskbar again when it restarts and sometimes on
 			// its own (e.g. opening Start). Hide it again while we own it.
 			if applied.on && weHid && cfg.Reassert && anyVisible(taskbarsOn(applied.mon)) {
@@ -174,10 +182,14 @@ func run(cfgPath string) {
 			pendingSince = time.Now()
 		}
 		switch {
+		case want.on && forcedNow:
+			pendingDelay = 0 // Keep taskbar hidden: hide now
 		case want.on:
 			pendingDelay = time.Duration(cfg.EnterDelayMs) * time.Millisecond
-		case fg.shellUI || isPaused:
-			pendingDelay = 0 // Start, Search, a flyout or Pause: show the taskbar now
+		case fg.shellUI || isPaused || (forcedHid && !isForced):
+			// Start, Search, a flyout, Pause, or Keep taskbar hidden turned
+			// off: show the taskbar now.
+			pendingDelay = 0
 		default:
 			pendingDelay = time.Duration(cfg.LeaveDelayMs) * time.Millisecond
 		}
@@ -193,6 +205,7 @@ func run(cfgPath string) {
 			log.Println("taskbar restored")
 		}
 		applied = want
+		forcedHid = want.on && forcedNow
 		if want.on {
 			ts := taskbarsOn(want.mon)
 			if len(ts) > 0 && !anyVisible(ts) {
@@ -202,7 +215,11 @@ func run(cfgPath string) {
 				// ownership so reassert hides it once Explorer comes up.
 				hideTaskbars(want.mon)
 				weHid = true
-				log.Printf("taskbar hidden for %s (class %q)", fg.proc, fg.class)
+				if forcedHid {
+					log.Println("taskbar hidden (keep taskbar hidden is on)")
+				} else {
+					log.Printf("taskbar hidden for %s (class %q)", fg.proc, fg.class)
+				}
 			}
 		}
 	}

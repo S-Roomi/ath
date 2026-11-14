@@ -88,6 +88,7 @@ const (
 	cmdRestore
 	cmdPause
 	cmdIgnoreLast
+	cmdForceHide
 )
 
 type wndClassEx struct {
@@ -153,6 +154,7 @@ var (
 	taskbarCreatedMsg uintptr
 	restoreOnExit     atomic.Bool            // set by the "Quit and Restore taskbar" menu item
 	paused            atomic.Bool            // set by the "Pause" menu item; read by the main loop
+	forceHide         atomic.Bool            // set by "Keep taskbar hidden" / hide_hotkey: hide whatever is in front
 	reloadConfig      atomic.Bool            // set after the tray edits config.json; the main loop reloads at once
 	lastFullscreen    atomic.Pointer[string] // process name of the last fullscreen app; written by the main loop
 	trayClassName     = "ATH.TrayWindow"
@@ -326,10 +328,18 @@ func showTrayMenu(hwnd uintptr) {
 	if paused.Load() {
 		pauseText = "Resume"
 	}
-	if hk := activeHotkey.Load(); hk != nil {
+	if hk := activePauseHotkey.Load(); hk != nil {
 		pauseText += "\t" + *hk // a tab right-aligns the shortcut, like other menus
 	}
 	appendItem(mfString, cmdPause, pauseText)
+	forceText, forceFlags := "Keep taskbar hidden", uintptr(mfString)
+	if hk := activeHideHotkey.Load(); hk != nil {
+		forceText += "\t" + *hk
+	}
+	if forceHide.Load() {
+		forceFlags |= mfChecked
+	}
+	appendItem(forceFlags, cmdForceHide, forceText)
 	// Read the last fullscreen app now: the main loop recorded it before the
 	// menu made ATH the foreground window.
 	var lastProc string
@@ -389,6 +399,8 @@ func handleTrayCommand(cmd uintptr, lastProc string) {
 		pSetEvent.Call(wakeEv)
 	case cmdPause:
 		togglePause("tray")
+	case cmdForceHide:
+		toggleForceHide("tray")
 	case cmdAutostart:
 		setAutostart(!autostartEnabled())
 	case cmdOpenConfig:
@@ -408,19 +420,31 @@ func handleTrayCommand(cmd uintptr, lastProc string) {
 // togglePause flips Pause/Resume. It is called from the tray menu and from
 // the hotkey thread; source is only for the log.
 func togglePause(source string) {
+	toggle(&paused, source, "paused", "resumed")
+}
+
+// toggleForceHide flips "Keep taskbar hidden": while on, the taskbar is hidden
+// whatever window is in front, fullscreen or not. Called from the tray menu
+// and the hotkey thread; source is only for the log.
+func toggleForceHide(source string) {
+	toggle(&forceHide, source, "keep taskbar hidden on", "keep taskbar hidden off")
+}
+
+// toggle flips b, logs the new state and wakes the main loop so the change
+// applies now, not at the next poll.
+func toggle(b *atomic.Bool, source, onText, offText string) {
 	// Swap via CompareAndSwap so two sources at once cannot both flip to the same value.
 	for {
-		old := paused.Load()
-		if paused.CompareAndSwap(old, !old) {
+		old := b.Load()
+		if b.CompareAndSwap(old, !old) {
 			if old {
-				log.Printf("%s: resumed", source)
+				log.Printf("%s: %s", source, offText)
 			} else {
-				log.Printf("%s: paused", source)
+				log.Printf("%s: %s", source, onText)
 			}
 			break
 		}
 	}
-	// Wake the main loop so the change applies now, not at the next poll.
 	pSetEvent.Call(wakeEv)
 }
 

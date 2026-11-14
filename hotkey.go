@@ -12,8 +12,8 @@ import (
 	"unsafe"
 )
 
-// The shortcut uses RegisterHotKey: Windows posts WM_HOTKEY to our thread when
-// the combination is pressed. It is not a keyboard hook and sees no other keys,
+// The shortcuts use RegisterHotKey: Windows posts WM_HOTKEY to our thread when
+// a combination is pressed. It is not a keyboard hook and sees no other keys,
 // so it is safe alongside kernel anti-cheat.
 
 var (
@@ -23,7 +23,7 @@ var (
 
 const (
 	wmHotkey    = 0x0312
-	wmHotkeySet = wmApp + 2 // thread message: register pendingHotkey instead
+	wmHotkeySet = wmApp + 2 // thread message: register pendingHotkeys instead
 
 	modAlt      = 0x0001
 	modControl  = 0x0002
@@ -31,13 +31,33 @@ const (
 	modWin      = 0x0008
 	modNoRepeat = 0x4000 // holding the keys down does not toggle over and over
 
-	hotkeyID = 1
+	hotkeyPauseID = 1
+	hotkeyHideID  = 2
 )
 
+// hotkeys are the shortcut strings from the config, in hotkeySlots order:
+// the "hotkey" key (Pause) and the "hide_hotkey" key (Keep taskbar hidden).
+type hotkeys [2]string
+
 var (
-	pendingHotkey atomic.Pointer[string] // hotkey the thread should switch to on wmHotkeySet
-	activeHotkey  atomic.Pointer[string] // display name of the registered hotkey, nil if none; shown in the tray menu
+	pendingHotkeys    atomic.Pointer[hotkeys] // shortcuts the thread should switch to on wmHotkeySet
+	activePauseHotkey atomic.Pointer[string]  // display name of the registered Pause shortcut, nil if none; shown in the tray menu
+	activeHideHotkey  atomic.Pointer[string]  // same for Keep taskbar hidden
 )
+
+// hotkeySlot is one shortcut ATH can register.
+type hotkeySlot struct {
+	id     uintptr
+	key    string // config key, for the log
+	does   string // for the log
+	active *atomic.Pointer[string]
+	action func()
+}
+
+var hotkeySlots = [len(hotkeys{})]hotkeySlot{
+	{hotkeyPauseID, "hotkey", "toggles Pause", &activePauseHotkey, func() { togglePause("hotkey") }},
+	{hotkeyHideID, "hide_hotkey", "toggles Keep taskbar hidden", &activeHideHotkey, func() { toggleForceHide("hide_hotkey") }},
+}
 
 type hotkeySpec struct {
 	mods, vk uint32
@@ -108,10 +128,10 @@ func parseHotkey(s string) (hotkeySpec, error) {
 	return h, nil
 }
 
-// startHotkey registers the shortcut on its own OS-locked thread, whose
-// message queue receives WM_HOTKEY. set switches to another shortcut ("" turns
-// it off); stop unregisters it and ends the thread.
-func startHotkey(initial string) (set func(string), stop func()) {
+// startHotkeys registers the shortcuts on their own OS-locked thread, whose
+// message queue receives WM_HOTKEY. set switches to other shortcuts ("" turns
+// one off); stop unregisters them and ends the thread.
+func startHotkeys(initial hotkeys) (set func(hotkeys), stop func()) {
 	tidCh := make(chan uint32, 1)
 	done := make(chan struct{})
 	go func() {
@@ -124,33 +144,51 @@ func startHotkey(initial string) (set func(string), stop func()) {
 		pPeekMessageW.Call(uintptr(unsafe.Pointer(&m)), 0, 0, 0, pmNoRemove)
 		tid, _, _ := pGetCurrentThreadId.Call()
 
-		registered := false
-		register := func(s string) {
-			if registered {
-				pUnregisterHotKey.Call(0, hotkeyID)
-				registered = false
-				activeHotkey.Store(nil)
+		var registered [len(hotkeySlots)]bool
+		unregisterAll := func() {
+			for i, sl := range hotkeySlots {
+				if registered[i] {
+					pUnregisterHotKey.Call(0, sl.id)
+					registered[i] = false
+				}
+				sl.active.Store(nil)
 			}
-			h, err := parseHotkey(s)
-			switch {
-			case err != nil:
-				log.Printf("hotkey: %v; no hotkey", err)
-				return
-			case h.vk == 0:
-				log.Println("hotkey: off")
-				return
-			}
-			// hwnd 0: WM_HOTKEY is posted to this thread's queue.
-			if r, _, err := pRegisterHotKey.Call(0, hotkeyID, uintptr(h.mods|modNoRepeat), uintptr(h.vk)); r == 0 {
-				log.Printf("hotkey: could not register %s, probably in use by another app: %v", h.name, err)
-				return
-			}
-			registered = true
-			name := h.name
-			activeHotkey.Store(&name)
-			log.Printf("hotkey: %s toggles Pause", h.name)
 		}
-		register(initial)
+		registerAll := func(keys hotkeys) {
+			unregisterAll()
+			var specs [len(hotkeySlots)]hotkeySpec
+			for i, sl := range hotkeySlots {
+				h, err := parseHotkey(keys[i])
+				switch {
+				case err != nil:
+					log.Printf("%s: %v; no shortcut", sl.key, err)
+					continue
+				case h.vk == 0:
+					log.Printf("%s: off", sl.key)
+					continue
+				}
+				dup := false
+				for j := 0; j < i; j++ {
+					if specs[j].vk == h.vk && specs[j].mods == h.mods {
+						log.Printf("%s: %s is already used by %s; not registered", sl.key, h.name, hotkeySlots[j].key)
+						dup = true
+					}
+				}
+				if dup {
+					continue
+				}
+				// hwnd 0: WM_HOTKEY is posted to this thread's queue.
+				if r, _, err := pRegisterHotKey.Call(0, sl.id, uintptr(h.mods|modNoRepeat), uintptr(h.vk)); r == 0 {
+					log.Printf("%s: could not register %s, probably in use by another app: %v", sl.key, h.name, err)
+					continue
+				}
+				specs[i], registered[i] = h, true
+				name := h.name
+				sl.active.Store(&name)
+				log.Printf("%s: %s %s", sl.key, h.name, sl.does)
+			}
+		}
+		registerAll(initial)
 		tidCh <- uint32(tid)
 
 		for {
@@ -160,23 +198,23 @@ func startHotkey(initial string) (set func(string), stop func()) {
 			}
 			switch m.Message {
 			case wmHotkey:
-				if m.WParam == hotkeyID {
-					togglePause("hotkey")
+				for _, sl := range hotkeySlots {
+					if m.WParam == sl.id {
+						sl.action()
+					}
 				}
 			case wmHotkeySet:
 				// Swap so several quick changes apply once, with the latest value.
-				if p := pendingHotkey.Swap(nil); p != nil {
-					register(*p)
+				if p := pendingHotkeys.Swap(nil); p != nil {
+					registerAll(*p)
 				}
 			}
 		}
-		if registered {
-			pUnregisterHotKey.Call(0, hotkeyID)
-		}
+		unregisterAll()
 	}()
 	tid := <-tidCh
-	set = func(s string) {
-		pendingHotkey.Store(&s)
+	set = func(keys hotkeys) {
+		pendingHotkeys.Store(&keys)
 		pPostThreadMessageW.Call(uintptr(tid), wmHotkeySet, 0, 0)
 	}
 	stop = func() {

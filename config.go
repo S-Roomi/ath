@@ -19,6 +19,7 @@ type Config struct {
 	Whitelist    []string `json:"whitelist"`      // if non-empty, ONLY these processes trigger hiding
 	TrayIcon     bool     `json:"tray_icon"`      // show a notification-area icon (read at startup only)
 	Hotkey       string   `json:"hotkey"`         // shortcut that toggles Pause, e.g. "ctrl+alt+h"; "" turns it off
+	HideHotkey   string   `json:"hide_hotkey"`    // shortcut that toggles Keep taskbar hidden; "" turns it off
 }
 
 func defaultConfig() Config {
@@ -32,6 +33,7 @@ func defaultConfig() Config {
 		Whitelist:    []string{},
 		TrayIcon:     true,
 		Hotkey:       "ctrl+alt+h",
+		HideHotkey:   "ctrl+alt+t",
 	}
 }
 
