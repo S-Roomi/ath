@@ -15,7 +15,7 @@ ATH is a Windows-only Go background process (no visible window, no console; just
 | `taskbar.go` | Finds `Shell_TrayWnd` / `Shell_SecondaryTrayWnd`, hides with `SW_HIDE`, shows with `SW_SHOWNA` |
 | `winevent.go` | Out-of-context `SetWinEventHook` (foreground, minimize-end) on a locked OS thread with its own message loop; `waitStopOrWake` |
 | `tray.go` | Notification-area icon and right-click menu on its own locked OS thread with a hidden window; icon drawn at runtime (`drawIcon`); autostart state read from the registry |
-| `hotkey.go` | Pause shortcut: `parseHotkey()` and `RegisterHotKey` on its own locked OS thread with a message loop (hwnd 0, so `WM_HOTKEY` goes to that thread); re-registers on config reload |
+| `hotkey.go` | Shortcuts (`hotkeySlots`: `hotkey` for Pause, `hide_hotkey` for Keep taskbar hidden): `parseHotkey()` and `RegisterHotKey` on its own locked OS thread with a message loop (hwnd 0, so `WM_HOTKEY` goes to that thread); re-registers on config reload |
 | `win32.go` | DLL/proc declarations, structs, constants, `utf16()`, `monitorOf()` |
 | `config.go` | `Config`, defaults, loading, file-change time |
 | `version.go` | `version` (set with `-ldflags "-X main.version=vX.Y.Z"`, else `dev` + git commit from build info), `--version` output via the parent console or a message box |
@@ -47,6 +47,7 @@ Go 1.22 (`go.mod`). The user compiles and tests on Windows themselves, so hand c
 - A second launch (mutex already taken) finds the running tray window by class (`ATH.TrayWindow`) and posts it `wmShowRunning`; the tray thread shows a balloon (`NIF_INFO`). The message crosses processes, so it carries no pointers. Without a tray window it only logs and exits.
 - The tray menu's Quit sets the same stop event. "Quit and Restore taskbar" also sets `restoreOnExit`, so `run()` shows every taskbar on the way out.
 - The tray menu's Pause/Resume and the `hotkey` shortcut both call `togglePause()`, which flips the `paused` atomic and sets the wake event. The hotkey uses `RegisterHotKey` (allowed with anti-cheat; it is not a keyboard hook). While paused, the loop's target is "off" with a delay of 0, so a taskbar ATH hid comes back at once and nothing new is hidden.
+- "Keep taskbar hidden" (tray item and `hide_hotkey`) calls `toggleForceHide()`, which flips the `forceHide` atomic. While it is on, the target is "on" for every taskbar (`mon` 0) whatever is in front, with a delay of 0, except while shell UI is in front. Pause wins over it. `forcedHid` remembers that the applied hide came from it, so turning it off shows the taskbar without the leave delay. Like Pause, it is not saved.
 - "Never hide for <app>": the main loop stores the last fullscreen process in `lastFullscreen`, because opening the menu makes ATH the foreground window. `addToIgnore` edits only the `ignore` key (unknown keys kept, unparseable file left alone) via temp file + rename, then the tray sets `reloadConfig` and the wake event so the loop reloads at once.
 
 ## Rules
