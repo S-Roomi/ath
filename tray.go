@@ -53,6 +53,8 @@ const (
 	// Posted to the tray window by a second ATH launch (another process), so
 	// it must not carry pointers.
 	wmShowRunning = wmApp + 3
+	// Posted to the tray window by the main loop when the tooltip text changes.
+	wmTrayUpdate = wmApp + 4
 
 	nimAdd     = 0
 	nimModify  = 1
@@ -157,6 +159,7 @@ var (
 	forceHide         atomic.Bool            // set by "Keep taskbar hidden" / hide_hotkey: hide whatever is in front
 	reloadConfig      atomic.Bool            // set after the tray edits config.json; the main loop reloads at once
 	lastFullscreen    atomic.Pointer[string] // process name of the last fullscreen app; written by the main loop
+	trayTip           atomic.Pointer[string] // tooltip text showing the current state; written by the main loop
 	trayClassName     = "ATH.TrayWindow"
 )
 
@@ -170,6 +173,9 @@ var trayWndProc = syscall.NewCallback(func(hwnd, msg, wParam, lParam uintptr) ui
 		return 0
 	case wmShowRunning:
 		showRunningBalloon()
+		return 0
+	case wmTrayUpdate:
+		updateTrayTip()
 		return 0
 	case wmClose:
 		removeTrayIcon()
@@ -264,14 +270,61 @@ func addTrayIcon() bool {
 	nid.UFlags = nifMessage | nifIcon | nifTip
 	nid.UCallbackMessage = wmTrayNotify
 	nid.HIcon = trayIcon
-	tip, _ := syscall.UTF16FromString("ATH")
-	copy(nid.SzTip[:len(nid.SzTip)-1], tip)
+	setTipText(&nid)
 	r, _, _ := pShellNotifyIconW.Call(nimAdd, uintptr(unsafe.Pointer(&nid)))
 	if r == 0 {
 		// Already present (e.g. TaskbarCreated sent without a real restart): update it.
 		r, _, _ = pShellNotifyIconW.Call(nimModify, uintptr(unsafe.Pointer(&nid)))
 	}
 	return r != 0
+}
+
+// setTipText copies the current tooltip into nid and sets nifTip.
+func setTipText(nid *notifyIconData) {
+	text := "ATH"
+	if p := trayTip.Load(); p != nil {
+		text = *p
+	}
+	tip, _ := syscall.UTF16FromString(text)
+	copy(nid.SzTip[:len(nid.SzTip)-1], tip) // longer text is cut off, keeping the final 0
+	nid.UFlags |= nifTip
+}
+
+// updateTrayTip shows the current tooltip on the icon. Runs on the tray thread.
+func updateTrayTip() {
+	nid := trayData()
+	setTipText(&nid)
+	pShellNotifyIconW.Call(nimModify, uintptr(unsafe.Pointer(&nid)))
+}
+
+// setTrayTip is called by the main loop with the tooltip for the current
+// state. It asks the tray thread to update the icon only when the text
+// changed, so calling it every tick is cheap.
+func setTrayTip(text string) {
+	if p := trayTip.Load(); p != nil && *p == text {
+		return
+	}
+	trayTip.Store(&text)
+	if trayHwnd != 0 {
+		pPostMessageW.Call(trayHwnd, wmTrayUpdate, 0, 0)
+	}
+}
+
+// tipText describes what ATH is doing, for the tray tooltip. "idle" means
+// running with the taskbar visible.
+func tipText(isPaused, isForced, hidden bool, hiddenFor string) string {
+	switch {
+	case isPaused:
+		return "ATH - paused"
+	case isForced:
+		return "ATH - keeping taskbar hidden"
+	case hidden && hiddenFor != "":
+		return "ATH - taskbar hidden for " + hiddenFor
+	case hidden:
+		return "ATH - taskbar hidden"
+	default:
+		return "ATH - idle"
+	}
 }
 
 // showRunningBalloon shows an "ATH is already running" notification from the

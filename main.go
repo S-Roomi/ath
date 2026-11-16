@@ -74,6 +74,7 @@ func run(cfgPath string) {
 	var applied, pending target // state in effect / state waiting to be applied
 	weHid := false              // true only if THIS process hid the taskbar
 	forcedHid := false          // the applied hide came from Keep taskbar hidden
+	hiddenFor := ""             // process the taskbar is hidden for, for the tray tooltip
 	var pendingSince, lastReassertLog time.Time
 	var pendingDelay time.Duration // delay the pending state must hold before it is applied
 	var lastLogKey string
@@ -105,6 +106,9 @@ func run(cfgPath string) {
 		versionString(), cfg.PollMs, cfg.EnterDelayMs, cfg.LeaveDelayMs, cfg.PerMonitor, cfg.Reassert)
 
 	for {
+		// Show the current state in the tray tooltip (posted only when it changes).
+		setTrayTip(tipText(paused.Load(), forceHide.Load(), applied.on && weHid, hiddenFor))
+
 		// Wait one poll interval, or less if a pending state is due sooner, so
 		// delays are not rounded up to the poll interval. Wake early on stop or
 		// on a foreground change.
@@ -166,6 +170,9 @@ func run(cfgPath string) {
 			// E.g. Keep taskbar hidden turned off while a fullscreen app is in
 			// front: the taskbar stays hidden, now for the fullscreen app.
 			forcedHid = applied.on && forcedNow
+			if applied.on && !forcedHid {
+				hiddenFor = fg.proc // e.g. one fullscreen app to another
+			}
 			// Explorer shows the taskbar again when it restarts and sometimes on
 			// its own (e.g. opening Start). Hide it again while we own it.
 			if applied.on && weHid && cfg.Reassert && anyVisible(taskbarsOn(applied.mon)) {
@@ -216,8 +223,10 @@ func run(cfgPath string) {
 				hideTaskbars(want.mon)
 				weHid = true
 				if forcedHid {
+					hiddenFor = ""
 					log.Println("taskbar hidden (keep taskbar hidden is on)")
 				} else {
+					hiddenFor = fg.proc
 					log.Printf("taskbar hidden for %s (class %q)", fg.proc, fg.class)
 				}
 			}

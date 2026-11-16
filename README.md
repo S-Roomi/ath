@@ -53,7 +53,7 @@ Starting `ath.exe` while it is already running shows an "ATH is already running"
 
 ### Tray icon
 
-While it runs, ATH shows an icon in the notification area (it may be in the overflow behind the `^` arrow). Right-click or left-click it for:
+While it runs, ATH shows an icon in the notification area (it may be in the overflow behind the `^` arrow). Hover over it to see what ATH is doing: `idle` (running, taskbar visible), `taskbar hidden for <app>`, `keeping taskbar hidden` or `paused`. Right-click or left-click it for:
 
 | Item | What it does |
 | --- | --- |
