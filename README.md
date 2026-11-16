@@ -12,6 +12,12 @@ A small background process for Windows 10/11 that automatically hides the taskba
 - Never leaves the taskbar hidden: it only restores what it hid, and fixes it after a crash
 - No install, no dependencies, safe with anti-cheat (no hooks or injection)
 
+## Download
+
+Download `ath.exe` from the [latest release](https://github.com/S-Roomi/ath/releases/latest) and put it in a folder of its own.
+
+Windows SmartScreen may warn about an unknown publisher the first time, because the exe isn't signed. Feel free to look over the source code. 
+
 ## Building From Source
 
 - Requires [Go](https://go.dev/dl/) 1.22 or newer, to build
