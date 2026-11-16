@@ -1,24 +1,20 @@
 # ATH
 
-A small background process for Windows that automatically hides the taskbar when a fullscreen or borderless app is in front, and brings it back when you leave. It hides the taskbar windows directly through the Win32 API, with no other tools needed.
+A small background process for Windows 10/11 that automatically hides the taskbar when a fullscreen or borderless app is in front.
 
-## How it works
+## Features
 
-- Windows tells it the moment the foreground window changes. It also checks every 300 ms as a fallback, for example for a window that resizes into fullscreen.
-- If the window covers its whole monitor, it hides the taskbar (on every monitor, or only that monitor with `per_monitor`).
-- Maximized windows don't count, even with Windows' "Automatically hide the taskbar" setting on (where a maximized window also covers the whole monitor). The log marks them `[maximized]`.
-- When you switch away, it shows the taskbar again. If you open Start, Search, the notification center, quick settings, the taskbar comes back straight away without the leave delay.
-- Every foreground change is written to the log with the window's process, class and size.
-- It only restores the taskbar if it was the one that hid it, and leaves a taskbar alone if something else already hid it.
-- If Explorer brings the taskbar back while a fullscreen app is still in front (for example after Explorer restarts), it hides it again.
-- If it crashes while the taskbar is hidden, the next start shows the taskbar again.
+- Hides the taskbar while a fullscreen or borderless app is in front, and brings it back when you leave
+- Every monitor, or only the fullscreen app's monitor (`per_monitor`)
+- Maximized windows don't count, even with "Automatically hide the taskbar" on
+- Start, Search and flyouts still bring the taskbar back
+- Pause, or keep the taskbar hidden, from the tray icon or a shortcut
+- Never leaves the taskbar hidden: it only restores what it hid, and fixes it after a crash
+- No install, no dependencies, safe with anti-cheat (no hooks or injection)
 
-## Requirements
+## Building From Source
 
-- Windows 10/11
-- [Go](https://go.dev/dl/) 1.22 or newer, to build
-
-## Build
+- Requires [Go](https://go.dev/dl/) 1.22 or newer, to build
 
 On Windows:
 
@@ -26,15 +22,7 @@ On Windows:
 go build -ldflags "-H=windowsgui -s -w" -o bin/ath.exe
 ```
 
-This puts the exe in `bin/` (ignored by git). `config.json`, `ath.log` and `hidden.marker` are created next to the exe, so they end up in `bin/` too and the source folder stays clean. You can copy `ath.exe` anywhere else; its files follow it.
-
-For a release, set the version number at build time:
-
-```
-go build -ldflags "-H=windowsgui -s -w -X main.version=v1.1.0" -o bin/ath.exe
-```
-
-Without `-X`, the build reports itself as `dev` plus the git commit it was built from, for example `dev (5023b7d)`.
+This puts the exe in `bin/`. `config.json`, `ath.log` and `hidden.marker` are created next to the exe, so they end up in `bin/` too. You can copy `ath.exe` anywhere else; its files follow it.
 
 ## Usage
 
@@ -45,28 +33,22 @@ Without `-X`, the build reports itself as `dev` plus the git commit it was built
 | `ath.exe --restore` | Quit the running instance and force the taskbar to show |
 | `ath.exe --install-autostart` | Start automatically at login |
 | `ath.exe --remove-autostart` | Remove autostart |
-| `ath.exe --version` | Show the version (printed in a command prompt, or in a message box when started from Explorer). It is also shown at the top of the tray menu and in `ath.log` |
-
-The exe has no window and prints nothing. Check `ath.log` (in the same folder as the exe).
-
-Starting `ath.exe` while it is already running shows an "ATH is already running" notification from the tray icon instead of starting a second copy. With `tray_icon` off, the second launch just exits (and logs it).
+| `ath.exe --version` | Show the version |
 
 ### Tray icon
 
-While it runs, ATH shows an icon in the notification area (it may be in the overflow behind the `^` arrow). Hover over it to see what ATH is doing: `idle` (running, taskbar visible), `taskbar hidden for <app>`, `keeping taskbar hidden` or `paused`. Right-click or left-click it for:
+While it runs, ATH shows an icon in the notification area. Hover over it to see what ATH is doing: `idle` (running, taskbar visible), `taskbar hidden for <app>`, `keeping taskbar hidden` or `paused`. Right-click or left-click it for:
 
 | Item | What it does |
 | --- | --- |
-| Pause / Resume | Stop hiding the taskbar without exiting. The `hotkey` shortcut (Ctrl+Alt+H by default) does the same and is shown next to the item. Pausing shows the taskbar at once if ATH hid it. Not remembered after a restart |
-| Keep taskbar hidden | Hide the taskbar whatever is in front, fullscreen or not, until you turn it off. The `hide_hotkey` shortcut (Ctrl+Alt+T by default) does the same and is shown next to the item; a check mark shows it is on. Start, Search and flyouts still bring the taskbar back while they are open. Pause wins over it. Not remembered after a restart |
-| Never hide for *app* | Adds the last app that went fullscreen to `ignore` in `config.json`, and shows the taskbar if it is still in front. Grayed out until an app has gone fullscreen. Other settings are kept, but their order in the file may change |
-| Start with Windows | On/off check for autostart, same as `--install-autostart` / `--remove-autostart` |
-| Open config | Opens `config.json` (in Notepad if no app is set for `.json`) |
+| Pause / Resume | Stops hiding the taskbar until you resume (Ctrl+Alt+H) |
+| Keep taskbar hidden | Hides the taskbar whatever is in front, fullscreen or not (Ctrl+Alt+T) |
+| Never hide for *app* | Adds the last fullscreen app to `ignore` in `config.json` |
+| Start with Windows | Turns autostart on or off, like `--install-autostart` / `--remove-autostart` |
+| Open config | Opens `config.json` |
 | Open log | Opens `ath.log` |
 | Quit and Restore taskbar | Same as `--restore` |
 | Quit | Same as `--quit` |
-
-Set `tray_icon` to `false` to run without the icon. It disappears as soon as you save `config.json`; set it back to `true` to bring it back. Without the icon, use the shortcuts and `ath.exe --quit`.
 
 ## Config
 
@@ -81,6 +63,6 @@ Set `tray_icon` to `false` to run without the icon. It disappears as soon as you
 | `poll_ms` | 300 | How often to check the foreground window |
 | `enter_delay_ms` | 500 | Wait before hiding |
 | `leave_delay_ms` | 400 | Wait before showing |
-| `tray_icon` | `true` | Show the notification-area icon. Applied as soon as you save the file |
-| `hotkey` | `"ctrl+alt+h"` | Shortcut that toggles Pause / Resume, even without the tray icon. Modifiers `ctrl`, `alt`, `shift`, `win`, plus a letter, a digit or `f1`-`f24` (letters and digits need a modifier). `""` turns it off. If another app already uses the combination, it is not registered and the log says so |
-| `hide_hotkey` | `"ctrl+alt+t"` | Shortcut that toggles Keep taskbar hidden. Same format as `hotkey`, and must differ from it. `""` turns it off |
+| `tray_icon` | `true` | Show the icon in tray |
+| `hotkey` | `"ctrl+alt+h"` | Shortcut that toggles Pause / Resume. If another app already uses the combination, it is not registered and the log says so |
+| `hide_hotkey` | `"ctrl+alt+t"` | Shortcut that toggles Keep taskbar hidden |
