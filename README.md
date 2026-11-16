@@ -66,7 +66,7 @@ While it runs, ATH shows an icon in the notification area (it may be in the over
 | Quit and Restore taskbar | Same as `--restore` |
 | Quit | Same as `--quit` |
 
-Set `tray_icon` to `false` to run without the icon.
+Set `tray_icon` to `false` to run without the icon. It disappears as soon as you save `config.json`; set it back to `true` to bring it back. Without the icon, use the shortcuts and `ath.exe --quit`.
 
 ## Config
 
@@ -81,6 +81,6 @@ Set `tray_icon` to `false` to run without the icon.
 | `poll_ms` | 300 | How often to check the foreground window |
 | `enter_delay_ms` | 500 | Wait before hiding |
 | `leave_delay_ms` | 400 | Wait before showing |
-| `tray_icon` | `true` | Show the notification-area icon. Read at startup only, so restart ATH after changing it |
+| `tray_icon` | `true` | Show the notification-area icon. Applied as soon as you save the file |
 | `hotkey` | `"ctrl+alt+h"` | Shortcut that toggles Pause / Resume, even without the tray icon. Modifiers `ctrl`, `alt`, `shift`, `win`, plus a letter, a digit or `f1`-`f24` (letters and digits need a modifier). `""` turns it off. If another app already uses the combination, it is not registered and the log says so |
 | `hide_hotkey` | `"ctrl+alt+t"` | Shortcut that toggles Keep taskbar hidden. Same format as `hotkey`, and must differ from it. `""` turns it off |

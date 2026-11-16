@@ -148,7 +148,9 @@ type iconInfo struct {
 	HbmColor uintptr
 }
 
-// Tray state. Only the tray thread touches these, except restoreOnExit.
+// Tray state. Only the tray thread touches trayHwnd and trayIcon, except
+// that the main loop reads trayHwnd between startTray and its stop func
+// (which also start and stop the tray thread, so the accesses do not overlap).
 var (
 	trayHwnd          uintptr
 	trayIcon          uintptr
@@ -197,7 +199,8 @@ var trayWndProc = syscall.NewCallback(func(hwnd, msg, wParam, lParam uintptr) ui
 // startTray creates the notification-area icon on its own OS-locked thread
 // with a message loop. Choosing Quit sets stopEv. It returns a func that
 // removes the icon and ends the thread, and ok=false if the icon could not
-// be created (the watcher keeps running without it).
+// be created (the watcher keeps running without it). The main loop calls it
+// again when tray_icon is turned back on in config.json.
 func startTray(stopEv uintptr) (stop func(), ok bool) {
 	trayStopEv = stopEv
 	ready := make(chan bool, 1)
@@ -214,6 +217,8 @@ func startTray(stopEv uintptr) (stop func(), ok bool) {
 			LpszClassName: utf16(trayClassName),
 		}
 		wc.CbSize = uint32(unsafe.Sizeof(wc))
+		// Fails harmlessly when the tray is started again after tray_icon was
+		// turned off and on: the class from the first start is still registered.
 		pRegisterClassExW.Call(uintptr(unsafe.Pointer(&wc)))
 
 		// A plain hidden top-level window (not message-only), because the popup
@@ -246,6 +251,8 @@ func startTray(stopEv uintptr) (stop func(), ok bool) {
 		if trayIcon != 0 {
 			pDestroyIcon.Call(trayIcon)
 		}
+		// Reset for a later startTray (tray_icon turned on again).
+		trayIcon, trayHwnd = 0, 0
 	}()
 	if !<-ready {
 		<-done

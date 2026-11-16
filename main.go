@@ -94,13 +94,24 @@ func run(cfgPath string) {
 	setHotkeys, stopHotkeys := startHotkeys(hotkeys{cfg.Hotkey, cfg.HideHotkey})
 	defer stopHotkeys()
 
-	if cfg.TrayIcon {
-		if stopTray, ok := startTray(stopEv); ok {
-			defer stopTray()
-		} else {
-			log.Println("could not create the tray icon, running without it")
+	// The tray icon. setTray starts or stops it; config reload calls it again
+	// when tray_icon changes, so no restart is needed.
+	var stopTray func() // nil while there is no tray icon
+	setTray := func(on bool) {
+		switch {
+		case on && stopTray == nil:
+			if stop, ok := startTray(stopEv); ok {
+				stopTray = stop
+			} else {
+				log.Println("could not create the tray icon, running without it")
+			}
+		case !on && stopTray != nil:
+			stopTray()
+			stopTray = nil
 		}
 	}
+	setTray(cfg.TrayIcon)
+	defer func() { setTray(false) }()
 
 	log.Printf("ATH %s watching (poll %dms, enter %dms, leave %dms, per_monitor %v, reassert %v)",
 		versionString(), cfg.PollMs, cfg.EnterDelayMs, cfg.LeaveDelayMs, cfg.PerMonitor, cfg.Reassert)
@@ -130,6 +141,14 @@ func run(cfgPath string) {
 				if nc, err := loadConfig(cfgPath); err == nil {
 					if nc.Hotkey != cfg.Hotkey || nc.HideHotkey != cfg.HideHotkey {
 						setHotkeys(hotkeys{nc.Hotkey, nc.HideHotkey})
+					}
+					if nc.TrayIcon != cfg.TrayIcon {
+						if nc.TrayIcon {
+							log.Println("tray_icon turned on, adding the tray icon")
+						} else {
+							log.Println("tray_icon turned off, removing the tray icon")
+						}
+						setTray(nc.TrayIcon)
 					}
 					cfg = nc
 					log.Println("config reloaded")

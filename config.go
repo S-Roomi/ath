@@ -17,7 +17,7 @@ type Config struct {
 	Reassert     bool     `json:"reassert"`       // hide the taskbar again if Explorer brings it back
 	Ignore       []string `json:"ignore"`         // process names that never trigger hiding
 	Whitelist    []string `json:"whitelist"`      // if non-empty, ONLY these processes trigger hiding
-	TrayIcon     bool     `json:"tray_icon"`      // show a notification-area icon (read at startup only)
+	TrayIcon     bool     `json:"tray_icon"`      // show a notification-area icon; applied on config reload too
 	Hotkey       string   `json:"hotkey"`         // shortcut that toggles Pause, e.g. "ctrl+alt+h"; "" turns it off
 	HideHotkey   string   `json:"hide_hotkey"`    // shortcut that toggles Keep taskbar hidden; "" turns it off
 }
